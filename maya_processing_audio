@@ -1,0 +1,70 @@
+
+import processing.serial.*;
+import processing.sound.*;
+
+Serial myPort;
+SoundFile audio1;
+
+void setup() {
+
+  size(400, 200);
+
+  // List available serial ports
+  println("Available serial ports:");
+
+  String[] portList = Serial.list();
+
+  for (int i = 0; i < portList.length; i++) {
+    println(i + ": " + portList[i]);
+  }
+
+  // Select Arduino serial port
+  int portIndex = 3; // Change if necessary
+
+  String portName = portList[portIndex];
+
+  myPort = new Serial(this, portName, 9600);
+
+  // Load audio file from data folder
+  audio1 = new SoundFile(this, "audio1.mp3");
+
+  println("Ready! Waiting for Arduino...");
+}
+
+void draw() {
+
+  background(0);
+
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(18);
+  text("Waiting for button press...", width/2, height/2);
+
+  // Check serial input
+  while (myPort.available() > 0) {
+
+    String inString = myPort.readStringUntil('\n');
+
+    if (inString != null) {
+
+      inString = inString.trim();
+
+      // Arduino sends "1"
+      if (inString.equals("1")) {
+
+        println("Button pressed! Playing audio.");
+
+        // Restart audio from beginning
+        audio1.stop();
+        audio1.play();
+      }
+    }
+  }
+}
+
+void stop() {
+
+  audio1.stop();
+
+  super.stop();
+}
