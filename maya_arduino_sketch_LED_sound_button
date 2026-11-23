@@ -1,0 +1,161 @@
+
+#include <Adafruit_NeoPixel.h>
+#include <math.h>
+
+// ==========================
+// HARDWARE
+// ==========================
+
+#define LED_PIN 6
+#define LED_COUNT 120
+#define BUTTON_PIN 2
+
+Adafruit_NeoPixel strip(
+  LED_COUNT,
+  LED_PIN,
+  NEO_GRB + NEO_KHZ800
+);
+
+// ==========================
+// SETTINGS
+// ==========================
+
+const int MAX_BRIGHTNESS = 80;
+const int TOTAL_CYCLES = 3;
+
+// Red: 3 pulses over 3 seconds
+const int RED_PULSES = 3;
+const unsigned long RED_DURATION = 3000;
+
+// Blue: 5 pulses over 10 seconds
+const int BLUE_PULSES = 5;
+const unsigned long BLUE_DURATION = 10000;
+
+// ==========================
+// BUTTON
+// ==========================
+
+bool lastButtonState = HIGH;
+bool sequenceRunning = false;
+
+// ==========================
+// SETUP
+// ==========================
+
+void setup() {
+
+  Serial.begin(9600);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  strip.begin();
+  strip.setBrightness(MAX_BRIGHTNESS);
+  strip.clear();
+  strip.show();
+
+  Serial.println("Ready. Press button.");
+}
+
+// ==========================
+// MAIN LOOP
+// ==========================
+
+void loop() {
+
+  bool buttonState = digitalRead(BUTTON_PIN);
+
+  // Detect new button press
+  if (buttonState == LOW &&
+      lastButtonState == HIGH &&
+      !sequenceRunning) {
+
+    delay(40); // Debounce
+
+    if (digitalRead(BUTTON_PIN) == LOW) {
+
+      // SEND TRIGGER TO PROCESSING
+      Serial.println("1");
+
+      // Start LED sequence
+      sequenceRunning = true;
+      runSequence();
+      sequenceRunning = false;
+    }
+  }
+
+  lastButtonState = digitalRead(BUTTON_PIN);
+}
+
+// ==========================
+// FULL LIGHT SEQUENCE
+// ==========================
+
+void runSequence() {
+
+  for (int cycle = 0; cycle < TOTAL_CYCLES; cycle++) {
+
+    // 3 gentle RED pulses
+    // over 3 seconds
+    breatheColor(
+      255, 0, 0,
+      RED_PULSES,
+      RED_DURATION
+    );
+
+    // 5 gentle BLUE pulses
+    // over 10 seconds
+    breatheColor(
+      0, 0, 255,
+      BLUE_PULSES,
+      BLUE_DURATION
+    );
+  }
+
+  // Turn all LEDs off
+  strip.clear();
+  strip.show();
+}
+
+// ==========================
+// SMOOTH BREATHING EFFECT
+// ==========================
+
+void breatheColor(
+  uint8_t r,
+  uint8_t g,
+  uint8_t b,
+  int pulses,
+  unsigned long totalDuration
+) {
+
+  unsigned long startTime = millis();
+
+  while (millis() - startTime < totalDuration) {
+
+    unsigned long elapsed =
+      millis() - startTime;
+
+    float progress =
+      (float)elapsed / totalDuration;
+
+    // Smooth fade in and out
+    float wave =
+      0.5 - 0.5 * cos(
+        2.0 * PI * pulses * progress
+      );
+
+    uint8_t red = r * wave;
+    uint8_t green = g * wave;
+    uint8_t blue = b * wave;
+
+    strip.fill(
+      strip.Color(red, green, blue)
+    );
+
+    strip.show();
+
+    delay(15);
+  }
+
+  strip.clear();
+  strip.show();
+}
